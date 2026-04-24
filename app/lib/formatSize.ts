@@ -1,19 +1,21 @@
+import clsx, { type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
 export const formatSize = (bytes: number): string => {
-  if (typeof bytes !== "number" || Number.isNaN(bytes) || bytes < 0) {
-    return "0 B";
-  }
+   if (bytes === 0) return '0 Bytes';
 
-  const units = ["B", "KB", "MB", "GB", "TB"];
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
 
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
+  // Determine the appropriate unit by calculating the log
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / Math.pow(1024, index);
-  const formatted = value.toFixed(2).replace(/\.00$/, "");
-
-  return `${formatted} ${units[index]}`;
+  // Format with 2 decimal places and round
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-export const generateUUID = () => crypto.randomUUID
+export const generateUUID = () => crypto.randomUUID()
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
