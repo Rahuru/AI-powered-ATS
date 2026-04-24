@@ -1,9 +1,16 @@
 import Navbar from '~/components/Navbar'
-import { useState, type FormEvent } from 'react'
+import { use, useState, type FormEvent } from 'react'
 import FileUploader from '~/components/FileUploader'
+import { usePuterStore } from '~/lib/puter'
+import { Navigate, useNavigate } from 'react-router'
+import { convertPdfToImage } from '~/lib/pdf2img'
+import { generateUUID } from '~/lib/formatSize'
+import { prepareInstructions } from '~/constants'
 
 const Upload = () => {
 
+    const {auth,isLoading,fs,ai,kv} = usePuterStore()
+    const navigate= useNavigate()
     const [isProcessing,setIsProcessing] = useState(false)
     const [statusMessage,setStatusMessage] = useState("")
     const [file, setFile] = useState<File | null>(null)
@@ -11,8 +18,76 @@ const Upload = () => {
     const handleFileSelect = (file: File | null) => {
        setFile(file);
     }
+
+    const handleAnalyze = async ({companyName, jobTitle, jobDescription,file}: {companyName: string, jobTitle: string, jobDescription: string, file: File}) => {
+        setIsProcessing(true)
+        setStatusMessage("Uploading your resume...")
+
+        const uploadedFile=await fs.upload([file])
+        if(!uploadedFile) {
+            return setStatusMessage("Failed to upload resume. Please try again.")
+        }
+
+        setStatusMessage("Converting to image...")
+        const imageFile= await convertPdfToImage(file)
+        if(!imageFile.file) {
+            return setStatusMessage("Failed to convert pdf to image. Please try again.")
+        }
+
+        setStatusMessage("Uploading the image...")
+        const uploadedImage=await fs.upload([imageFile.file])
+        if(!uploadedImage) {
+            return setStatusMessage("Failed to upload resume image. Please try again.")
+        }
+
+        setStatusMessage("Preparing data for analysis...")
+        const uuid=generateUUID()
+        const data={
+            id: uuid,
+            resumePath: uploadedFile.path,
+            imageFilePath: uploadedImage.path,
+            companyName,jobTitle,jobDescription,
+            feedback:'',
+        }
+        await kv.set(`resume:${uuid}`, JSON.stringify(data))
+
+        setStatusMessage("Analyzing your resume...")
+
+        const feedback=await ai.feedback(
+            uploadedFile.path,
+            prepareInstructions({jobTitle, jobDescription})
+        )
+
+        if(!feedback) {
+            return setStatusMessage("Failed to analyze resume. Please try again.")
+        }
+
+        const feedbackText= typeof feedback.message.content === 'string' 
+        ? feedback.message.content 
+        : feedback.message.content[0].text
+
+        data.feedback= JSON.parse(feedbackText)
+        await kv.set(`resume:${uuid}`, JSON.stringify(data))
+
+        setStatusMessage("Analysis complete! Redirecting to results page...")
+        console.log(data)
+    }
+
     const handleSubmit= (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        const form = e.currentTarget.closest('form')
+        if (!form) return
+
+        const formData = new FormData(form)
         
+        const companyName = formData.get('company-name') as string
+        const jobTitle = formData.get('job-title') as string
+        const jobDescription = formData.get('job-description') as string
+
+        if(!file) return
+
+        handleAnalyze({companyName, jobTitle, jobDescription, file})
+
     }
     return (
         <main className="bg-[url('/images/bg-main.svg')] bg-cover">
