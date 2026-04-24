@@ -1,5 +1,5 @@
 import Navbar from '~/components/Navbar'
-import { use, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import FileUploader from '~/components/FileUploader'
 import { usePuterStore } from '~/lib/puter'
 import { Navigate, useNavigate } from 'react-router'
@@ -45,7 +45,7 @@ const Upload = () => {
         const data={
             id: uuid,
             resumePath: uploadedFile.path,
-            imageFilePath: uploadedImage.path,
+            imagePath: uploadedImage.path,
             companyName,jobTitle,jobDescription,
             feedback:'',
         }
@@ -108,11 +108,11 @@ const Upload = () => {
                         <form id='upload-form' onSubmit={handleSubmit} className='flex flex-col gap-4 mt-8'>
                             <div className='form-div'>
                                 <label htmlFor='company-name' >Company Name</label>
-                                <input type='text' id='company-name' placeholder='Company Name' name='company-name' required />
+                                <input type='text' id='company-name' placeholder='Company Name' name='company-name'  />
                             </div>
                             <div className='form-div'>
                                 <label htmlFor='job-title' >Job Title</label>
-                                <input type='text' id='job-title' placeholder='Job Title' name='job-title' required />
+                                <input type='text' id='job-title' placeholder='Job Title' name='job-title'  />
                             </div>
                             <div className='form-div'>
                                 <label htmlFor='job-description' >Job Description</label>
